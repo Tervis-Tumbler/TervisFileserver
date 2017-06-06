@@ -120,7 +120,8 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
         $Name = "*"
     )
     if ($ComputerOrganizationalUnit){
-        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit
+#        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit
+        $ComputerList = Get-ADComputer -Filter 'name -eq "hamtestwin10-02"' -SearchBase "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv" | select dnshostname -ExpandProperty dnshostname
     }
     else{
         $ComputerList = $ComputerName
@@ -128,7 +129,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
 
     $ExplorerFavoritesDefinition = Get-ExplorerFavoritesShortcutDefinition -Name $Name
     
-
+    foreach ($ComputerName in $ComputerList){
         $WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major}
         if ($WindowsVersion -lt 10){
             $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName -Username $UserName
@@ -136,22 +137,22 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 foreach ($Favorite in $ExplorerFavoritesDefinition){
                     if($WindowsVersion -lt 10){
                         $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
-                        Set-Shortcut -LinkPath "$LinksFolderPath\$Favorite.Name.lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath $_.Target
+                        Set-Shortcut -LinkPath "$LinksFolderPath\$($Favorite.Name).lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath $_.Target
                     }
                 }
             }
         }
 
         if ($WindowsVersion -ge 10){
-            $RegistryPath = "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run"
             $ExplorerFavoritesDefinition | %{
                 $PowershellScript += "(new-object -com shell.application).Namespace(`"$($_.Target)`").Self.InvokeVerb(`"pintohome`")`n"
-        }
+            }
             Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($PowershellScript)
                 if(-not (Test-Path c:\scripts)){New-Item -Path c:\ -Name Scripts -ItemType Directory}
                 $PowershellScript | Out-File C:\Scripts\ExplorerFavorites.ps1
                 New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File c:\Scripts\ExplorerFavorites.ps1" -PropertyType String -Force
+            } -ArgumentList $PowershellScript
         }
     }
 }
