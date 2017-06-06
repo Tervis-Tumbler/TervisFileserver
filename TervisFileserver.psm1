@@ -120,8 +120,8 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
         $Name = "*"
     )
     if ($ComputerOrganizationalUnit){
-#        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit
-        $ComputerList = Get-ADComputer -Filter 'name -eq "hamtestwin10-02"' -SearchBase "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv" | select dnshostname -ExpandProperty dnshostname
+        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit
+#        $ComputerList = Get-ADComputer -Filter 'name -eq "dmohlmaster2012"' -SearchBase "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv" | select dnshostname -ExpandProperty dnshostname
     }
     else{
         $ComputerList = $ComputerName
