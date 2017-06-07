@@ -137,7 +137,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 foreach ($Favorite in $ExplorerFavoritesDefinition){
                     if($WindowsVersion -lt 10){
                         $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
-                        Set-Shortcut -LinkPath "$LinksFolderPath\$($Favorite.Name).lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath $_.Target
+                        Set-Shortcut -LinkPath "$LinksFolderPath\$($Favorite.Name).lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath $Favorite.Target
                     }
                 }
             }
