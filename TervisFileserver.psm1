@@ -17,6 +17,7 @@
     [PSCustomObject][Ordered]@{
         Name = "Art"
         Target = "\\tervis.prv\departments\Art"
+        Delete = $true
     },
     [PSCustomObject][Ordered]@{
         Name = "Web"
@@ -57,6 +58,7 @@
     [PSCustomObject][Ordered]@{
         Name = "Admin"
         Target = "\\tervis.prv\departments\Admin"
+        Delete = $true
     },
     [PSCustomObject][Ordered]@{
         Name = "New Product Development"
@@ -137,7 +139,12 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 foreach ($Favorite in $ExplorerFavoritesDefinition){
                     if($WindowsVersion -lt 10){
                         $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
-                        Set-Shortcut -LinkPath "$LinksFolderPath\$($Favorite.Name).lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath $Favorite.Target
+                        if($Favorite.Delete){
+                            Remove-Item -Path "$LinksFolderPath\$($Favorite.Name).lnk" -Force
+                        }
+                        Else{
+                            Set-Shortcut -LinkPath "$LinksFolderPath\$($Favorite.Name).lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath $Favorite.Target
+                        }
                     }
                 }
             }
@@ -145,7 +152,12 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
 
         if ($WindowsVersion -ge 10){
             $ExplorerFavoritesDefinition | %{
-                $PowershellScript += "(new-object -com shell.application).Namespace(`"$($_.Target)`").Self.InvokeVerb(`"pintohome`")`n"
+                if($Favorite.Delete){
+                    $PowershellScript += "(new-object -com shell.application).Namespace(`"$($_.Target)`").Self.InvokeVerb(`"unpintohome`")`n"
+                }
+                Else{
+                    $PowershellScript += "(new-object -com shell.application).Namespace(`"$($_.Target)`").Self.InvokeVerb(`"pintohome`")`n"
+                }
             }
             Invoke-Command -ComputerName $ComputerName -ScriptBlock {
                 param($PowershellScript)
