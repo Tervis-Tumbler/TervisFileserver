@@ -120,7 +120,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
         $Name = "*"
     )
     if ($ComputerOrganizationalUnit){
-        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit
+        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit | select dnshostname -ExpandProperty dnshostname
 #        $ComputerList = Get-ADComputer -Filter 'name -eq "dmohlmaster2012"' -SearchBase "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv" | select dnshostname -ExpandProperty dnshostname
     }
     else{
@@ -164,7 +164,7 @@ function Install-ExplorerFavoritesScheduledTasks {
     begin {
         $ScheduledTaskCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstateCredential -PasswordID 259)
         $Execute = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-        $Argument = '-Command Push-TervisExplorerFavoritesOrQuickAccess -ComputerName dmohlmaster-new -Name it -NoProfile'
+        $Argument = -NoProfile -Command 'Push-TervisExplorerFavoritesOrQuickAccess -ComputerOrganizationalUnit "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv"'
     }
     process {
         $CimSession = New-CimSession -ComputerName $ComputerName
