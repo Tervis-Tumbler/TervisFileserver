@@ -164,7 +164,6 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File c:\Scripts\ExplorerFavorites.ps1" -PropertyType String -Force
             } -ArgumentList $PowershellScript
         }
-        $PowershellScript
     }
 }
 
@@ -212,4 +211,72 @@ function Get-ComputersWithinOU{
     }
 }
 
- 
+function Test-TervisExplorerFavoritesOrQuickAccess {
+    param(
+        [Parameter(ParameterSetName="TestFavoritesbyOU",Mandatory)]
+        $ComputerOrganizationalUnit,
+
+        [Parameter(ParameterSetName="TestFavoritesbyComputer",Mandatory)]
+        $ComputerName,
+
+        [Parameter(ParameterSetName="PushFavoritesbyOU")]
+        [Parameter(ParameterSetName="PushFavoritesbyComputer")]
+        $Name = "*"
+    )
+    if ($ComputerOrganizationalUnit){
+        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit | select dnshostname -ExpandProperty dnshostname
+    }
+    else{
+        $ComputerList = $ComputerName
+    }
+
+    $ExplorerFavoritesDefinition = Get-ExplorerFavoritesShortcutDefinition -Name $Name
+    $PowershellScript = ""
+    
+    foreach ($ComputerName in $ComputerList){
+        $WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major}
+        if ($WindowsVersion -lt 10){
+            $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName -Username $UserName
+            foreach ($Profile in $UserProfiles){
+                foreach ($Favorite in $ExplorerFavoritesDefinition){
+                    if($WindowsVersion -lt 10){
+                        $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
+                        if($Favorite.Delete){
+                            $Status = Test-Path -Path "$($LinksFolderPath)\$($Favorite.name).lnk"
+                            if ($Status -eq $true){
+                                [PSCustomObject][Ordered]@{
+                                    Computer = $ComputerName
+                                    Favorite = $Favorite
+                                    Status = $Status
+                                }
+                            }
+                        }
+                        Else{
+                            $Status = Test-Path -Path "$($LinksFolderPath)\$($Favorite.name).lnk"
+                            if ($status -eq $false){
+                                [PSCustomObject][Ordered]@{
+                                   Computer = $ComputerName
+                                   Favorite = $Favorite
+                                   Status = $Status
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        if ($WindowsVersion -ge 10){
+            $output = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+                Test-Path c:\scripts\ExplorerFavorites.ps1
+            }
+        if ($Output -eq $false){
+         [PSCustomObject][Ordered]@{
+            Computer = $ComputerName
+            Status = $false
+         }
+    
+            }
+        }
+    }
+}
