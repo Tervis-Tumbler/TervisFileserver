@@ -130,6 +130,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
     }
 
     $ExplorerFavoritesDefinition = Get-ExplorerFavoritesShortcutDefinition -Name $Name
+    $PowershellScript = ""
     
     foreach ($ComputerName in $ComputerList){
         $WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major}
@@ -152,10 +153,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
 
         if ($WindowsVersion -ge 10){
             $ExplorerFavoritesDefinition | %{
-                if($Favorite.Delete){
-                    $PowershellScript += "(new-object -com shell.application).Namespace(`"$($_.Target)`").Self.InvokeVerb(`"unpintohome`")`n"
-                }
-                Else{
+                if($_.Delete -ne $True){
                     $PowershellScript += "(new-object -com shell.application).Namespace(`"$($_.Target)`").Self.InvokeVerb(`"pintohome`")`n"
                 }
             }
@@ -166,6 +164,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File c:\Scripts\ExplorerFavorites.ps1" -PropertyType String -Force
             } -ArgumentList $PowershellScript
         }
+        $PowershellScript
     }
 }
 
