@@ -14,11 +14,11 @@
         Name = "Compliance"
         Target = "\\tervis.prv\departments\Compliance"
     },
-    [PSCustomObject][Ordered]@{
-        Name = "Art"
-        Target = "\\tervis.prv\departments\Art"
-        Delete = $true
-    },
+#    [PSCustomObject][Ordered]@{
+#        Name = "Art"
+#        Target = "\\tervis.prv\departments\Art"
+#        Delete = $true
+#    },
     [PSCustomObject][Ordered]@{
         Name = "Web"
         Target = "\\tervis.prv\departments\Web"
@@ -55,11 +55,11 @@
         Name = "Supply Chain"
         Target = "\\tervis.prv\departments\Supply Chain"
     },
-    [PSCustomObject][Ordered]@{
-        Name = "Admin"
-        Target = "\\tervis.prv\departments\Admin"
-        Delete = $true
-    },
+#    [PSCustomObject][Ordered]@{
+#        Name = "Admin"
+#        Target = "\\tervis.prv\departments\Admin"
+#        Delete = $true
+#    },
     [PSCustomObject][Ordered]@{
         Name = "New Product Development"
         Target = "\\tervis.prv\departments\New Product Development"
@@ -122,7 +122,8 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
         $Name = "*"
     )
     if ($ComputerOrganizationalUnit){
-        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit | select dnshostname -ExpandProperty dnshostname
+        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit $ComputerOrganizationalUnit -Online
+#        Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit | select dnshostname -ExpandProperty dnshostname
 #        $ComputerList = Get-ADComputer -Filter 'name -eq "dmohlmaster2012"' -SearchBase "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv" | select dnshostname -ExpandProperty dnshostname
     }
     else{
@@ -140,7 +141,7 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 foreach ($Favorite in $ExplorerFavoritesDefinition){
                     if($WindowsVersion -lt 10){
                         $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
-                        if($Favorite.Delete){
+                        if($Favorite.Delete -and (Test-Path -Path "$LinksFolderPath\$($Favorite.Name).lnk")){
                             Remove-Item -Path "$LinksFolderPath\$($Favorite.Name).lnk" -Force
                         }
                         Else{
@@ -223,8 +224,10 @@ function Test-TervisExplorerFavoritesOrQuickAccess {
         [Parameter(ParameterSetName="PushFavoritesbyComputer")]
         $Name = "*"
     )
+    $FavoritesStateWin7 = @()
+    $FavoritesStateWin10 = @()
     if ($ComputerOrganizationalUnit){
-        $ComputerList = Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit | select dnshostname -ExpandProperty dnshostname
+        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit $ComputerOrganizationalUnit -Online
     }
     else{
         $ComputerList = $ComputerName
@@ -234,49 +237,57 @@ function Test-TervisExplorerFavoritesOrQuickAccess {
     $PowershellScript = ""
     
     foreach ($ComputerName in $ComputerList){
-        $WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major}
+        if (-not ($WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major} -ErrorAction SilentlyContinue)){
+            Continue
+        }
         if ($WindowsVersion -lt 10){
+            $State = $true
             $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName -Username $UserName
-            foreach ($Profile in $UserProfiles){
+            $Profile = $UserProfiles | where {$ComputerName -match (($_.userprofilename -split "-")[0])}
                 foreach ($Favorite in $ExplorerFavoritesDefinition){
                     if($WindowsVersion -lt 10){
                         $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
                         if($Favorite.Delete){
-                            $Status = Test-Path -Path "$($LinksFolderPath)\$($Favorite.name).lnk"
-                            if ($Status -eq $true){
-                                [PSCustomObject][Ordered]@{
-                                    Computer = $ComputerName
-                                    Favorite = $Favorite
-                                    Status = $Status
-                                }
+                            $LinkExists = Test-Path -Path "$($LinksFolderPath)\$($Favorite.name).lnk"
+                            if ($LinkExists -eq $true){
+                                $State -eq $false
+                                Break
                             }
                         }
                         Else{
-                            $Status = Test-Path -Path "$($LinksFolderPath)\$($Favorite.name).lnk"
-                            if ($status -eq $false){
-                                [PSCustomObject][Ordered]@{
-                                   Computer = $ComputerName
-                                   Favorite = $Favorite
-                                   Status = $Status
-                                }
+                            $LinkExists = Test-Path -Path "$($LinksFolderPath)\$($Favorite.name).lnk"
+                            if ($LinkExists -eq $false){
+                                $State = $false
+                                Break
                             }
                         }
                     }
                 }
-            }
+                if ($State -eq $false){
+                    $FavoritesStateWin7 += [PSCustomObject][Ordered]@{
+                        Computer = $ComputerName
+                        WindowsVersion = $WindowsVersion
+                        Profile = $Profile.UserProfileName
+                        Compliant = $State
+                    }
+                }
         }
 
         if ($WindowsVersion -ge 10){
-            $output = Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-                Test-Path c:\scripts\ExplorerFavorites.ps1
+            $output = Invoke-Command -ComputerName $ComputerName -ScriptBlock {Test-Path c:\scripts\ExplorerFavorites.ps1}
+            if ($Output -eq $false){
+                $State = $false
             }
-        if ($Output -eq $false){
-         [PSCustomObject][Ordered]@{
-            Computer = $ComputerName
-            Status = $false
-         }
-    
+            if ($State -eq $false){
+                $FavoritesStateWin10 += [PSCustomObject][Ordered]@{
+                    Computer = $ComputerName
+                    WindowsVersion = $WindowsVersion
+                    Profile = "-"
+                    Compliant = $State
+                }
             }
         }
     }
+    $FavoritesStateWin7
+    $FavoritesStateWin10
 }
