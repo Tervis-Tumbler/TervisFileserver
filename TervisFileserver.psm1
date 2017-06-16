@@ -131,9 +131,9 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
     }
 
     $ExplorerFavoritesDefinition = Get-ExplorerFavoritesShortcutDefinition -Name $Name
-    $PowershellScript = ""
     
     foreach ($ComputerName in $ComputerList){
+        $PowershellScript = ""
         $WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major}
         if ($WindowsVersion -lt 10){
             $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName -Username $UserName
