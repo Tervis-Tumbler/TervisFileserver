@@ -76,9 +76,12 @@
 
 function Get-ExplorerFavoritesShortcutDefinition {
     param(
-        [Parameter(Mandatory)]$Name
+        $Name
     )
+    if ($name){
         $ExplorerFavoritesShortcutDefinition | where Name -like $Name
+    }
+    else {$ExplorerFavoritesShortcutDefinition}
 }
 
 function Get-UserProfilesOnComputer {
