@@ -125,8 +125,8 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
         $Name = "*"
     )
     if ($ComputerOrganizationalUnit){
-        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit $ComputerOrganizationalUnit -Online
-#        Get-ADComputer -filter * -SearchBase $ComputerOrganizationalUnit | select dnshostname -ExpandProperty dnshostname
+        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit "OU=Departments,DC=tervis,DC=prv" -Online | where {$_.distinguishedname -NotLike "*Remote Store Computers*" -and $_.distinguishedname -NotLike "*Welder Stations*"} | select Name -ExpandProperty Name
+#        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit $ComputerOrganizationalUnit -Online | where {$_.distinguishedname -NotLike "*Remote Store Computers*" -and $_.distinguishedname -NotLike "*Welder Stations*"}
 #        $ComputerList = Get-ADComputer -Filter 'name -eq "dmohlmaster2012"' -SearchBase "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv" | select dnshostname -ExpandProperty dnshostname
     }
     else{
@@ -194,24 +194,23 @@ function Get-ComputersWithinOU{
         [Switch]$Online
     )
 
-    $ComputerNames = Get-ADComputer -Filter * -SearchBase $OrganizationalUnit |
-    Select -ExpandProperty name
+    $Computers = Get-ADComputer -Filter * -SearchBase $OrganizationalUnit
+    
 
     $Responses = Start-ParallelWork -ScriptBlock {
         param($Parameter)
         [pscustomobject][ordered]@{
-            ComputerName = $Parameter;
-            Online = $(Test-Connection -ComputerName $Parameter -Count 1 -Quiet);        
+            Name = $Parameter.Name;
+            DistinguishedName = $Parameter.DistinguishedName
+            Online = $(Test-Connection -ComputerName $Parameter.Name -Count 1 -Quiet);        
         }
-    } -Parameters $ComputerNames
+    } -Parameters $Computers
 
     if ($Online) {
-        $Responses | 
-        where Online -EQ $true |
-        Select -ExpandProperty ComputerName
+        $Responses 
+        where Online -EQ $true
     } else {
-        $Responses |         
-        Select -ExpandProperty ComputerName
+        $Responses
     }
 }
 
