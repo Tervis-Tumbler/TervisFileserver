@@ -212,8 +212,7 @@ function Get-ComputersWithinOU{
     } -Parameters $Computers
 
     if ($Online) {
-        $Responses 
-        where Online -EQ $true
+        $Responses | where Online -EQ $true
     } else {
         $Responses
     }
