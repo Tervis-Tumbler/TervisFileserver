@@ -137,13 +137,23 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
     
     foreach ($ComputerName in $ComputerList){
         $PowershellScript = ""
-        $WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major}
+        if ( -not ($WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major} -ErrorAction SilentlyContinue)){
+ #           [pscustomobject][ordered]@{
+ #               Name = $ComputerName
+ #               Status = "Failed - Version $WindowsVersion"
+ #           }
+        Continue
+        }
+
         if ($WindowsVersion -lt 10){
             $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName -Username $UserName
             foreach ($Profile in $UserProfiles){
+                $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
+                if(-not (Test-Path $LinksFolderPath -PathType Container)){
+                    Continue
+                }
                 foreach ($Favorite in $ExplorerFavoritesDefinition){
                     if($WindowsVersion -lt 10){
-                        $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)\Links"
                         if($Favorite.Delete -and (Test-Path -Path "$LinksFolderPath\$($Favorite.Name).lnk")){
                             Remove-Item -Path "$LinksFolderPath\$($Favorite.Name).lnk" -Force
                         }
@@ -168,6 +178,11 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File c:\Scripts\ExplorerFavorites.ps1" -PropertyType String -Force
             } -ArgumentList $PowershellScript
         }
+#        [pscustomobject][ordered]@{
+#            Name = $ComputerName
+#            Status = "Success - Version $WindowsVersion"
+#        }
+        
     }
 }
 
