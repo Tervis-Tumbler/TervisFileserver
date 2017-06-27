@@ -178,13 +178,18 @@ function Install-ExplorerFavoritesScheduledTasks {
     begin {
         $ScheduledTaskCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstateCredential -PasswordID 259)
         $Execute = 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe'
-        $Argument = -NoProfile -Command 'Push-TervisExplorerFavoritesOrQuickAccess -ComputerOrganizationalUnit "OU=Computers,OU=Information Technology,OU=Departments,DC=tervis,DC=prv"'
+        $Argument = '-NoProfile -Command Push-TervisExplorerFavoritesOrQuickAccess -ComputerOrganizationalUnit "OU=Departments,DC=tervis,DC=prv" > c:\schedoutput\PushExplorerFavorites.log'
     }
     process {
         $CimSession = New-CimSession -ComputerName $ComputerName
-        If (-NOT (Get-ScheduledTask -TaskName PushExplorerFavorites -CimSession $CimSession -ErrorAction SilentlyContinue)) {
-            Install-TervisScheduledTask -Credential $ScheduledTaskCredential -TaskName PushExplorerFavorites -Execute $Execute -Argument $Argument -RepetitionIntervalName EverWorkdayDuringTheDayEvery15Minutes -ComputerName $ComputerName
+        If (Get-ScheduledTask -TaskName PushExplorerFavorites -CimSession $CimSession -ErrorAction SilentlyContinue) {
+            Uninstall-TervisScheduledTask -TaskName PushExplorerFavorites -ComputerName $ComputerName -Force
         }
+        Install-TervisScheduledTask -Credential $ScheduledTaskCredential -TaskName PushExplorerFavorites -Execute $Execute -Argument $Argument -RepetitionIntervalName EverWorkdayDuringTheDayEvery15Minutes -ComputerName $ComputerName
+
+#        If (-NOT (Get-ScheduledTask -TaskName PushExplorerFavorites -CimSession $CimSession -ErrorAction SilentlyContinue)) {
+#            Install-TervisScheduledTask -Credential $ScheduledTaskCredential -TaskName PushExplorerFavorites -Execute $Execute -Argument $Argument -RepetitionIntervalName EverWorkdayDuringTheDayEvery15Minutes -ComputerName $ComputerName
+#        }
     }
 }
 
