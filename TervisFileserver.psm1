@@ -248,7 +248,7 @@ function Test-TervisExplorerFavoritesOrQuickAccess {
     $FavoritesStateWin7 = @()
     $FavoritesStateWin10 = @()
     if ($ComputerOrganizationalUnit){
-        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit $ComputerOrganizationalUnit -Online
+        $ComputerList = Get-ComputersWithinOU -OrganizationalUnit $ComputerOrganizationalUnit -Online | select Name -ExpandProperty Name
     }
     else{
         $ComputerList = $ComputerName
@@ -311,4 +311,46 @@ function Test-TervisExplorerFavoritesOrQuickAccess {
     }
     $FavoritesStateWin7
     $FavoritesStateWin10
+}
+
+function Get-MappedDrives {
+    param(
+        [Parameter(Mandatory,ValueFromPipeline)] $ComputerName
+    )
+    Process{
+        if(Test-Connection -ComputerName $ComputerName -Count 1 -Quiet){
+            #Get remote explorer session to identify current user
+            $explorer = Get-WmiObject -ComputerName $ComputerName -Class win32_process | ?{$_.name -eq "explorer.exe"}
+            
+            #If a session was returned check HKEY_USERS for Network drives under their SID
+            if($explorer){
+                $Hive = [long]$HIVE_HKU = 2147483651
+                $sid = ($explorer.GetOwnerSid()).sid
+                $owner  = $explorer.GetOwner()
+                $RegProv = get-WmiObject -List -Namespace "root\default" -ComputerName $ComputerName | Where-Object {$_.Name -eq "StdRegProv"}
+                $DriveList = $RegProv.EnumKey($Hive, "$($sid)\Network")
+                $DriveMappings = @()
+    
+                #If the SID network has mapped drives iterate and report on said drives
+                if($DriveList.sNames.count -gt 0){
+                    foreach($drive in $DriveList.sNames){
+                        $DriveMappings += [PSCustomObject][Ordered]@{
+                            DriveLetter = $($drive)
+                            Target = $(($RegProv.GetStringValue($Hive, "$($sid)\Network\$($drive)", "RemotePath")).sValue)
+                        }
+                    }
+                }
+                else{$DriveMappings = "None"}
+            }
+            else{"explorer.exe not running on $($ComputerName)"}
+        }
+        else{"Can't connect to $($ComputerName)"}
+
+        [PSCustomObject][Ordered]@{
+            ComputerName = $($ComputerName)
+            User = "$($owner.Domain)\$($owner.user)"
+            DriveMappings = $DriveMappings
+        }
+        
+    }
 }
