@@ -357,3 +357,9 @@ function Get-MappedDrives {
         
     }
 }
+
+function Get-FileServerAnalysis {
+$Files = gci "\\tervis.prv\departments\Departments - I Drive" -Recurse
+
+
+}
