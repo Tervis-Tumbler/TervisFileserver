@@ -178,10 +178,6 @@ function Push-TervisExplorerFavoritesOrQuickAccess {
                 New-ItemProperty -Path "HKLM:\Software\Microsoft\Windows\CurrentVersion\Run" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File c:\Scripts\ExplorerFavorites.ps1" -PropertyType String -Force
             } -ArgumentList $PowershellScript
         }
-#        [pscustomobject][ordered]@{
-#            Name = $ComputerName
-#            Status = "Success - Version $WindowsVersion"
-#        }
         
     }
 }
@@ -355,6 +351,36 @@ function Get-MappedDrives {
             }
         } -Parameters $ComputerName
         
+    }
+}
+
+function Invoke-PushTervisExplorerFavoritesOrQuickAccess {
+    param(
+        [parameter(Mandatory)]$ComputerName
+    )
+    if ( -not ($WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major} -ErrorAction SilentlyContinue)){
+        Continue
+    }
+
+    if ($WindowsVersion -lt 10){
+        $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName
+        foreach ($Profile in $UserProfiles){
+            $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)"
+            if(-not (Test-Path $LinksFolderPath -PathType Container)){
+                New-Item -Path $LinksFolderPath -Name "Links" -ItemType Directory
+            }
+            Copy-Item -Path "\\tervis.prv\SYSVOL\tervis.prv\scripts\Logon\ExplorerFavorites\Links\*" -Destination "$LinksFolderPath\Links"
+        }
+    }
+
+    if ($WindowsVersion -ge 10){
+        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+            New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
+            if (-not (Test-Path "HKU:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\runonce")){
+                New-Item -Path "HKU:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion" -Name "RunOnce"
+            }
+            New-ItemProperty -Path "HKU:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File \\tervis.prv\SYSVOL\tervis.prv\scripts\Logon\ExplorerFavorites\ExplorerFavorites.ps1" -PropertyType String -Force
+        }
     }
 }
 
