@@ -1,78 +1,15 @@
 ﻿$ExplorerFavoritesShortcutDefinition = [PSCustomObject][Ordered]@{
-        Name = "IT"
-        Target = "\\tervis.prv\departments\IT"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Graphics"
-        Target = "\\tervis.prv\creative\graphics drive"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Departments - I - Drive"
-        Target = "\\tervis.prv\departments\Departments - I Drive"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Compliance"
-        Target = "\\tervis.prv\departments\Compliance"
-    },
-#    [PSCustomObject][Ordered]@{
-#        Name = "Art"
-#        Target = "\\tervis.prv\departments\Art"
-#        Delete = $true
-#    },
-    [PSCustomObject][Ordered]@{
-        Name = "Web"
-        Target = "\\tervis.prv\departments\Web"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Marketing"
-        Target = "\\tervis.prv\departments\Marketing"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Engineering"
-        Target = "\\tervis.prv\departments\Engineering"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Operations"
-        Target = "\\tervis.prv\departments\Operations"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "QA"
-        Target = "\\tervis.prv\departments\QA"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "HR"
-        Target = "\\tervis.prv\departments\HR"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Sales"
-        Target = "\\tervis.prv\departments\Sales"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Stores"
-        Target = "\\tervis.prv\departments\Stores"
-    },
-    [PSCustomObject][Ordered]@{
-        Name = "Supply Chain"
-        Target = "\\tervis.prv\departments\Supply Chain"
-    },
-#    [PSCustomObject][Ordered]@{
-#        Name = "Admin"
-#        Target = "\\tervis.prv\departments\Admin"
-#        Delete = $true
-#    },
-    [PSCustomObject][Ordered]@{
-        Name = "New Product Development"
-        Target = "\\tervis.prv\departments\New Product Development"
-    },
-    [PSCustomObject][Ordered]@{
         Name = "Applications"
         Target = "\\tervis.prv\Applications"
     },
     [PSCustomObject][Ordered]@{
-        Name = "Finance"
-        Target = "\\tervis.prv\departments\Finance"
+        Name = "Departments"
+        Target = "\\tervis.prv\departments"
+    },
+    [PSCustomObject][Ordered]@{
+        Name = "Creative"
+        Target = "\\tervis.prv\Creative"
     }
-
 
 function Get-ExplorerFavoritesShortcutDefinition {
     param(
@@ -354,33 +291,36 @@ function Get-MappedDrives {
     }
 }
 
-function Invoke-PushTervisExplorerFavoritesOrQuickAccess {
+function Invoke-PushTervisExplorerFavoritesOrQuickAccessToNewEndpoint {
     param(
         [parameter(Mandatory)]$ComputerName
     )
-    if ( -not ($WindowsVersion = invoke-command -ComputerName $ComputerName -ScriptBlock {[Environment]::OSVersion.Version.Major} -ErrorAction SilentlyContinue)){
-        Continue
+    if(-not (Test-Path "\\$ComputerName\c$\users\default\links" -PathType Container)){
+        New-Item -Path "\\$ComputerName\c$\users\default" -Name "Links" -ItemType Directory
     }
+    Set-Shortcut -LinkPath "\\$computername\c$\users\default\Links\Departments.lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath "\\tervis.prv\Departments"
+    Set-Shortcut -LinkPath "\\$computername\c$\users\default\Links\Applications.lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath "\\tervis.prv\Applications"
+    Set-Shortcut -LinkPath "\\$ComputerName\c$\users\default\Links\Creative.lnk" -IconLocation "c:\windows\system32\SHELL32.dll,42" -TargetPath "\\tervis.prv\Creative"
 
-    if ($WindowsVersion -lt 10){
-        $UserProfiles = Get-UserProfilesOnComputer -Computer $ComputerName
-        foreach ($Profile in $UserProfiles){
-            $LinksFolderPath = "\\$ComputerName\c$\$($Profile.UserProfilePath)"
-            if(-not (Test-Path $LinksFolderPath -PathType Container)){
-                New-Item -Path $LinksFolderPath -Name "Links" -ItemType Directory
-            }
-            Copy-Item -Path "\\tervis.prv\SYSVOL\tervis.prv\scripts\Logon\ExplorerFavorites\Links\*" -Destination "$LinksFolderPath\Links"
+    $ExplorerQuickAccessScript = @"
+if(-not (Test-Path "`$env:USERPROFILE\links" -PathType Container)){
+    New-Item -Path "`$env:USERPROFILE" -Name "Links" -ItemType Directory
+}
+Copy-Item -Path "C:\users\Default\Links\*" -Destination "`$env:USERPROFILE\Links" -Force
+(new-object -com shell.application).Namespace(`"\\tervis.prv\Creative`").Self.InvokeVerb(`"pintohome`")
+(new-object -com shell.application).Namespace(`"\\tervis.prv\Applications`").Self.InvokeVerb(`"pintohome`")
+(new-object -com shell.application).Namespace(`"\\tervis.prv\Departments`").Self.InvokeVerb(`"pintohome`")
+"@
+    $ScriptPathRoot = "c:\programdata"
+    $ScriptFolderName = "Tervis"
+    Invoke-Command -ComputerName $ComputerName -ScriptBlock {
+        if(-not (Test-Path "$using:ScriptPathRoot\$using:ScriptFolderName" -PathType Container)){
+            New-Item -Path $using:ScriptPathRoot -Name "Tervis" -ItemType Directory
         }
-    }
-
-    if ($WindowsVersion -ge 10){
-        Invoke-Command -ComputerName $ComputerName -ScriptBlock {
-            New-PSDrive -PSProvider Registry -Name HKU -Root HKEY_USERS
-            if (-not (Test-Path "HKU:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\runonce")){
-                New-Item -Path "HKU:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion" -Name "RunOnce"
-            }
-            New-ItemProperty -Path "HKU:\.DEFAULT\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name ExplorerFavorites -Value "Powershell -windowstyle hidden -File \\tervis.prv\SYSVOL\tervis.prv\scripts\Logon\ExplorerFavorites\ExplorerFavorites.ps1" -PropertyType String -Force
-        }
+        $using:ExplorerQuickAccessScript | Out-File "$using:ScriptPathRoot\$using:ScriptFolderName\ExplorerQuickAccess.ps1" -Force
+        & REG LOAD HKU\TEMP C:\Users\Default\NTUSER.DAT
+        New-ItemProperty -Path "Registry::HKEY_USERS\TEMP\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name ExplorerFavorites -Value "powershell.exe -noprofile -file $using:ScriptPathRoot\$using:ScriptFolderName\ExplorerQuickAccess.ps1" -PropertyType String -Force
+        & reg unload HKU\TEMP
     }
 }
 
@@ -389,3 +329,4 @@ $Files = gci "\\tervis.prv\departments\Departments - I Drive" -Recurse
 
 
 }
+
