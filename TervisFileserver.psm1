@@ -292,6 +292,7 @@ function Get-MappedDrives {
 }
 
 function Invoke-PushTervisExplorerFavoritesOrQuickAccessToNewEndpoint {
+    [CmdletBinding()]
     param(
         [parameter(Mandatory)]$ComputerName
     )
