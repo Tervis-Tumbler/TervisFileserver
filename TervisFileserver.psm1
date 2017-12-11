@@ -331,3 +331,21 @@ $Files = gci "\\tervis.prv\departments\Departments - I Drive" -Recurse
 
 }
 
+function Get-TervisEmptyHomedirectories {
+    param(
+        [parameter(Mandatory)]$Computername
+
+    )
+    $HomeDirectories = get-childitem -Directory -path \\$Computername\home
+    Foreach ($HomeDirectory in $HomeDirectories){
+        $FileCount = gci $homedirectory.fullname | Measure-Object
+        if ($FileCount.Count -eq 0){
+            [PSCustomObject][Ordered]@{
+                Path = $HomeDirectory.fullname
+                FileCount = $FileCount.Count
+            }
+        }
+    }
+    
+
+}
