@@ -320,6 +320,9 @@ Copy-Item -Path "C:\users\Default\Links\*" -Destination "`$env:USERPROFILE\Links
         }
         $using:ExplorerQuickAccessScript | Out-File "$using:ScriptPathRoot\$using:ScriptFolderName\ExplorerQuickAccess.ps1" -Force
         & REG LOAD HKU\TEMP C:\Users\Default\NTUSER.DAT
+        if (-not (Test-Path "Registry::HKEY_USERS\TEMP\Software\Microsoft\Windows\CurrentVersion\Run")){
+            New-Item -Path "Registry::HKEY_USERS\TEMP\Software\Microsoft\Windows\CurrentVersion" -Name "RunOnce"
+        }
         New-ItemProperty -Path "Registry::HKEY_USERS\TEMP\Software\Microsoft\Windows\CurrentVersion\RunOnce" -Name ExplorerFavorites -Value "powershell.exe -noprofile -file $using:ScriptPathRoot\$using:ScriptFolderName\ExplorerQuickAccess.ps1" -PropertyType String -Force
         & reg unload HKU\TEMP
     }
