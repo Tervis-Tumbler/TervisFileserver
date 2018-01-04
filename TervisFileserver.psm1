@@ -349,3 +349,28 @@ function Get-TervisEmptyHomedirectories {
     
 
 }
+
+function Test-HomeDirectoryExistonFileservers{
+    param(
+        [parameter(Mandatory)]$Usernames
+    )
+    foreach ($Username in $Usernames){
+        $Username = $username.Replace("`r","")
+        $DirExist = $false
+        $location = "---"
+#        $DirExist = (Test-Path "\\fileserver1\home\$Username") -or (Test-Path "\\fileserver3\home\$Username")
+        if ($Location = Test-Path "\\fileserver1\home\$Username"){
+            $Location = "Fileserver1\home\$Username"
+            $DirExist = $True
+        }
+        elseif ($Location = Test-Path "\\fileserver3\home\$Username"){
+            $Location = "Fileserver3\home\$Username"
+            $DirExist = $True    
+        }
+        [pscustomobject][ordered]@{
+            Username = $username
+            "Homedir Exists" = $DirExist
+            Location = $Location
+        }
+    }
+}
