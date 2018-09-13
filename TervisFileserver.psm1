@@ -509,12 +509,13 @@ function Test-DFSNamespaceFolderHealth {
 
 function Test-LocalLinuxDirectoryHealthCheck {
     $LocalLinuxPathDefinition = Get-RemoteDirectoryHealthDefinition -OS Linux
+    $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 259)
     ForEach($ComputerDefinition in $LocalLinuxPathDefinition){
-        $PasswordstateCredential = Get-PasswordstatePassword -ID $Computerdefinition.PasswordstateRootCredentialID -AsCredential
+#        $PasswordstateCredential = Get-PasswordstatePassword -ID $Computerdefinition.PasswordstateRootCredentialID -AsCredential
         if(-not (Get-SSHSession -ComputerName $ComputerDefinition.Computername)){
             $SSHSession = New-SSHSession -ComputerName $ComputerDefinition.Computername $PasswordstateCredential -AcceptKey 
         }
-        $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "cat /etc/fstab").output -split "`n`r" | Where-Object {$_ -NotMatch "^#"}
+        $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "sudo cat /etc/fstab").output -split "`n`r" | Where-Object {$_ -NotMatch "^#"}
         foreach($Entry in $RawFSTAB){
             $Mountpoint = ($Entry -split "\s+")[1]
             if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerDefinition.Computername)) -Command "mountpoint $($Mountpoint)").output) -eq "$($Mountpoint) is a mountpoint"){
