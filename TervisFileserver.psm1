@@ -509,7 +509,7 @@ function Test-DFSNamespaceFolderHealth {
 
 function Test-LocalLinuxDirectoryHealthCheck {
     $LocalLinuxPathDefinition = Get-RemoteDirectoryHealthDefinition -OS Linux
-    $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 259)
+    $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 5574)
     ForEach($ComputerDefinition in $LocalLinuxPathDefinition){
 #        $PasswordstateCredential = Get-PasswordstatePassword -ID $Computerdefinition.PasswordstateRootCredentialID -AsCredential
         if(-not (Get-SSHSession -ComputerName $ComputerDefinition.Computername)){
