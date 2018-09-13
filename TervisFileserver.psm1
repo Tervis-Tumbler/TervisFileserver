@@ -470,16 +470,16 @@ function Invoke-InfrastructurePathChecks{
     $FailedLinuxMounts = Test-LocalLinuxDirectoryHealthCheck
     $FailedNamespaces = Test-DFSNamespaceFolderHealth
     $FromAddress = "Mailerdaemon@tervis.com"
-    $ToAddress = "windowsserveradministrator@tervis.com"
+    $ToAddress = "dmohlmaster@tervis.com"
     $Subject = "***ACTION REQUIRED*** Mounpoint or Share Folder Failure"
     $Body = @"
 <html><body>
 <h2>The following Namespace folders or Linux Mountpoint checks failed</h2>
 $(
-    ***Linux Mountpoints***
+    "***Linux Mountpoints***"
     $FailedLinuxMounts |
     ConvertTo-Html -As Table -Fragment
-    ***DFS Namespaces***
+    "***DFS Namespaces***"
     $FailedNamespaces |
     ConvertTo-Html -As Table -Fragment
 )
@@ -495,7 +495,7 @@ function Test-DFSNamespaceFolderHealth {
         $NamespaceShares = Get-DfsnFolder -Path "$($Folder.path)\*"
         foreach ($Share in $NamespaceShares.Path){
             if($Share -notlike "\\tervis.prv\applications\MES\Helix\HotFolders*"){
-                if((wait-path -Path $Share -Timeout $Timeout -Passthru) -eq $false){
+                if((wait-path -Path $Share -Timeout $Timeout -Passthru) -ne $false){
                     [PSCustomObject]@{
                         Path = $Share
                         Status = "Timed Out"
@@ -517,7 +517,7 @@ function Test-LocalLinuxDirectoryHealthCheck {
         $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "cat /etc/fstab").output -split "`n`r" | Where-Object {$_ -NotMatch "^#"}
         foreach($Entry in $RawFSTAB){
             $Mountpoint = ($Entry -split "\s+")[1]
-            if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerDefinition.Computername)) -Command "mountpoint $($Mountpoint)").output) -ne "$($Mountpoint) is a mountpoint"){
+            if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerDefinition.Computername)) -Command "mountpoint $($Mountpoint)").output) -eq "$($Mountpoint) is a mountpoint"){
                 [PSCustomObject]@{
                     Path = $Mountpoint
                     Computername = $ComputerDefinition.Computername
@@ -529,4 +529,41 @@ function Test-LocalLinuxDirectoryHealthCheck {
     Get-SSHSession | Remove-SSHSession | Out-Null
 }
 
+Function Get-RemoteDirectoryHealthDefinition{
+    param(
+        $OS
+    )
+    $RemoteLInuxDirectoryHealthDefinitions | where {-not $OS -or $_.OS -In $OS}
+}
+
+$RemoteLInuxDirectoryHealthDefinitions = [PSCustomObject]@{
+    Computername = "ebsapps-prd"
+    OS = "Linux"
+    PasswordstateRootCredentialID = "4695"
+},
+[PSCustomObject]@{
+    Computername = "ebsdb-prd"
+    OS = "Linux"
+    PasswordstateRootCredentialID = "4696"
+},
+[PSCustomObject]@{
+    Computername = "p-odbee02"
+    OS = "Linux"
+    PasswordstateRootCredentialID = "4702"
+},
+[PSCustomObject]@{
+    Computername = "p-weblogic01"
+    OS = "Linux"
+    PasswordstateRootCredentialID = "4703"
+},
+[PSCustomObject]@{
+    Computername = "p-weblogic02"
+    OS = "Linux"
+    PasswordstateRootCredentialID = "4704"
+},
+[PSCustomObject]@{
+    Computername = "p-infadac"
+    OS = "Linux"
+    PasswordstateRootCredentialID = "4701"
+}
 
