@@ -485,7 +485,7 @@ $(
 )
 </body></html>
 "@
-    Send-TervisMailMessage -From $FromAddress -To $ToAddress -Subject $Subject -Body $Body -UseAuthentication
+    Send-TervisMailMessage -From $FromAddress -To $ToAddress -Subject $Subject -Body $Body
 }
 
 function Test-DFSNamespaceFolderHealth {
