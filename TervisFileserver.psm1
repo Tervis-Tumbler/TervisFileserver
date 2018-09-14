@@ -508,63 +508,31 @@ function Test-DFSNamespaceFolderHealth {
 
 
 function Test-LocalLinuxDirectoryHealthCheck {
-    $LocalLinuxPathDefinition = Get-RemoteDirectoryHealthDefinition -OS Linux
+    $LinuxServersToMonitor = @"
+ebsdb-prd
+ebsapps-prd
+p-odbee02
+p-weblogic01
+p-weblogic02
+p-infadac
+"@ -split "`r`n"
     $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 5574)
-    ForEach($ComputerDefinition in $LocalLinuxPathDefinition){
-#        $PasswordstateCredential = Get-PasswordstatePassword -ID $Computerdefinition.PasswordstateRootCredentialID -AsCredential
-        if(-not (Get-SSHSession -ComputerName $ComputerDefinition.Computername)){
-            $SSHSession = New-SSHSession -ComputerName $ComputerDefinition.Computername $PasswordstateCredential -AcceptKey 
+    ForEach($ComputerName in $LocalLinuxPathDefinition){
+        if(-not (Get-SSHSession -ComputerName $ComputerName)){
+            $SSHSession = New-SSHSession -ComputerName $ComputerName $PasswordstateCredential -AcceptKey 
         }
         $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "sudo cat /etc/fstab").output -split "`n`r" | Where-Object {$_ -NotMatch "^#"}
         foreach($Entry in $RawFSTAB){
             $Mountpoint = ($Entry -split "\s+")[1]
-            if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerDefinition.Computername)) -Command "mountpoint $($Mountpoint)").output) -eq "$($Mountpoint) is a mountpoint"){
+            if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command "mountpoint $($Mountpoint)").output) -eq "$($Mountpoint) is a mountpoint"){
                 [PSCustomObject]@{
                     Path = $Mountpoint
-                    Computername = $ComputerDefinition.Computername
+                    Computername = $ComputerName
                     Status = "Not Mounted"
                 }
             }
         }
     }
     Get-SSHSession | Remove-SSHSession | Out-Null
-}
-
-Function Get-RemoteDirectoryHealthDefinition{
-    param(
-        $OS
-    )
-    $RemoteLInuxDirectoryHealthDefinitions | where {-not $OS -or $_.OS -In $OS}
-}
-
-$RemoteLInuxDirectoryHealthDefinitions = [PSCustomObject]@{
-    Computername = "ebsapps-prd"
-    OS = "Linux"
-    PasswordstateRootCredentialID = "4695"
-},
-[PSCustomObject]@{
-    Computername = "ebsdb-prd"
-    OS = "Linux"
-    PasswordstateRootCredentialID = "4696"
-},
-[PSCustomObject]@{
-    Computername = "p-odbee02"
-    OS = "Linux"
-    PasswordstateRootCredentialID = "4702"
-},
-[PSCustomObject]@{
-    Computername = "p-weblogic01"
-    OS = "Linux"
-    PasswordstateRootCredentialID = "4703"
-},
-[PSCustomObject]@{
-    Computername = "p-weblogic02"
-    OS = "Linux"
-    PasswordstateRootCredentialID = "4704"
-},
-[PSCustomObject]@{
-    Computername = "p-infadac"
-    OS = "Linux"
-    PasswordstateRootCredentialID = "4701"
 }
 
