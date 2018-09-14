@@ -495,7 +495,7 @@ function Test-DFSNamespaceFolderHealth {
         $NamespaceShares = Get-DfsnFolder -Path "$($Folder.path)\*"
         foreach ($Share in $NamespaceShares.Path){
             if($Share -notlike "\\tervis.prv\applications\MES\Helix\HotFolders*"){
-                if((wait-path -Path $Share -Timeout $Timeout -Passthru) -ne $false){
+                if((wait-path -Path $Share -Timeout $Timeout -Passthru) -eq $false){
                     [PSCustomObject]@{
                         Path = $Share
                         Status = "Timed Out"
@@ -524,7 +524,7 @@ p-infadac
         $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "sudo cat /etc/fstab").output -split "`n`r" | Where-Object {$_ -NotMatch "^#"}
         foreach($Entry in $RawFSTAB){
             $Mountpoint = ($Entry -split "\s+")[1]
-            if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command "mountpoint $($Mountpoint)").output) -eq "$($Mountpoint) is a mountpoint"){
+            if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command "mountpoint $($Mountpoint)").output) -ne "$($Mountpoint) is a mountpoint"){
                 [PSCustomObject]@{
                     Path = $Mountpoint
                     Computername = $ComputerName
