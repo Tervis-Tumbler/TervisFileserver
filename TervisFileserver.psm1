@@ -515,9 +515,9 @@ p-odbee02
 p-weblogic01
 p-weblogic02
 p-infadac
-"@ -split "`r`n"
+"@ -split "`n"
     $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 5574)
-    ForEach($ComputerName in $LocalLinuxPathDefinition){
+    ForEach($ComputerName in $LinuxServersToMonitor){
         if(-not (Get-SSHSession -ComputerName $ComputerName)){
             $SSHSession = New-SSHSession -ComputerName $ComputerName $PasswordstateCredential -AcceptKey 
         }
