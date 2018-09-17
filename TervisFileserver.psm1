@@ -485,7 +485,9 @@ $(
 )
 </body></html>
 "@
-    Send-TervisMailMessage -From $FromAddress -To $ToAddress -Subject $Subject -Body $Body
+    if($FailedLinuxMounts -or $FailedNamespaces){
+        Send-TervisMailMessage -From $FromAddress -To $ToAddress -Subject $Subject -Body $Body
+    }
 }
 
 function Test-DFSNamespaceFolderHealth {
