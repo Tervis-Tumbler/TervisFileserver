@@ -537,4 +537,20 @@ p-infadac
     }
     Get-SSHSession | Remove-SSHSession | Out-Null
 }
-
+function Install-FileResourceMonitorPowershellApplication {
+	param (
+		$ComputerName
+	)
+    $ScheduledTaskCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 259)
+    Install-PowerShellApplication -ComputerName $ComputerName `
+        -EnvironmentName "Infrastructure" `
+        -ModuleName "TervisFileServer" `
+        -TervisModuleDependencies PasswordstatePowershell,TervisMicrosoft.PowerShell.Utility,TervisMailMessage `
+        -PowerShellGalleryDependencies "Posh-SSH" `
+        -ScheduledTasksCredential $ScheduledTaskCredential `
+        -ScheduledTaskName "TervisFileShareMonitor" `
+        -RepetitionIntervalName "EverWorkdayDuringTheDayEvery15Minutes" `
+        -CommandString @"
+Invoke-InfrastructurePathChecks
+"@
+}
