@@ -470,7 +470,7 @@ function Invoke-InfrastructurePathChecks{
     $FailedLinuxMounts = Test-LocalLinuxDirectoryHealthCheck
     $FailedNamespaces = Test-DFSNamespaceFolderHealth
     $FromAddress = "Mailerdaemon@tervis.com"
-    $ToAddress = "dmohlmaster@tervis.com"
+    $ToAddress = "SystemsTeam@tervis.com"
     $Subject = "***ACTION REQUIRED*** Mounpoint or Share Folder Failure"
     $Body = @"
 <html><body>
