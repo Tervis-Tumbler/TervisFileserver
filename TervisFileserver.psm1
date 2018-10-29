@@ -476,12 +476,12 @@ function Invoke-InfrastructurePathChecks{
 <html><body>
 <h2>The following Namespace folders or Linux Mountpoint checks failed</h2>
 $(
-    "***Linux Mountpoints***"
-    $FailedLinuxMounts |
-    ConvertTo-Html -As Table -Fragment
-    "***DFS Namespaces***"
-    $FailedNamespaces |
-    ConvertTo-Html -As Table -Fragment
+    if($FailedLinuxMounts){
+        $FailedLinuxMounts | ConvertTo-Html -As Table -Fragment
+    }
+    if($FailedNamespaces){
+        $FailedNamespaces | ConvertTo-Html -As Table -Fragment
+    }
 )
 </body></html>
 "@
