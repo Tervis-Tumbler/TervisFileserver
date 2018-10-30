@@ -467,6 +467,7 @@ Function Wait-Path {
 }
 
 function Invoke-InfrastructurePathChecks{
+        [CmdletBinding()]
     $FailedLinuxMounts = Test-LocalLinuxDirectoryHealthCheck
     $FailedNamespaces = Test-DFSNamespaceFolderHealth
     $FromAddress = "Mailerdaemon@tervis.com"
@@ -510,6 +511,7 @@ function Test-DFSNamespaceFolderHealth {
 
 
 function Test-LocalLinuxDirectoryHealthCheck {
+    
     $LinuxServersToMonitor = @"
 ebsdb-prd
 ebsapps-prd
@@ -517,26 +519,47 @@ p-odbee02
 p-weblogic01
 p-weblogic02
 p-infadac
-"@ -split "`n"
+"@ -split "`r`n"
     $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 5574)
     ForEach($ComputerName in $LinuxServersToMonitor){
         if(-not (Get-SSHSession -ComputerName $ComputerName)){
-            $SSHSession = New-SSHSession -ComputerName $ComputerName $PasswordstateCredential -AcceptKey 
+            $SSHSession = New-SSHSession -ComputerName $ComputerName $PasswordstateCredential -AcceptKey
         }
-        $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "sudo cat /etc/fstab").output -split "`n`r" | Where-Object {$_ -NotMatch "^#"}
+        else{
+            $SSHSession = Get-SSHSession -ComputerName $ComputerName
+        }
+        $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "sudo cat /etc/fstab").output -split "`r`n" | Where-Object {$_ -NotMatch "^#"}
         foreach($Entry in $RawFSTAB){
             $Mountpoint = ($Entry -split "\s+")[1]
+            $FilesystemType = ($Entry -split "\s+")[2]
+            $WriteTestCommand = "sudo touch $($Mountpoint)/LocalFileSystemWriteTest"
+            $DeleteTestCommand = "sudo rm -f $($Mountpoint)/LocalFileSystemWriteTest"
             if(((Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command "mountpoint $($Mountpoint)").output) -ne "$($Mountpoint) is a mountpoint"){
                 [PSCustomObject]@{
                     Path = $Mountpoint
                     Computername = $ComputerName
                     Status = "Not Mounted"
                 }
+                Continue
+            }
+            if($FilesystemType -eq "nfs"){
+                try{
+                    Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command $WriteTestCommand -TimeOut 10 | Out-Null
+                    Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command $DeleteTestCommand -TimeOut 10 | Out-Null
+                }
+                catch{
+                    [PSCustomObject]@{
+                        Path = $Mountpoint
+                        Computername = $ComputerName
+                        Status = "Write Timed Out"
+                    }
+                }
             }
         }
     }
     Get-SSHSession | Remove-SSHSession | Out-Null
 }
+
 function Install-FileResourceMonitorPowershellApplication {
 	param (
 		$ComputerName
