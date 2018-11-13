@@ -497,7 +497,7 @@ function Test-DFSNamespaceFolderHealth {
     foreach ($Folder in $DFSNRootFolders){
         $NamespaceShares = Get-DfsnFolder -Path "$($Folder.path)\*"
         foreach ($Share in $NamespaceShares.Path){
-            if(($Share -notlike "*\applications\MES\Helix\HotFolders*"){
+            if($Share -notlike "*\applications\MES\Helix\HotFolders*"){
                 if((wait-path -Path $Share -Timeout $Timeout -Passthru) -eq $false){
                     [PSCustomObject]@{
                         Path = $Share
