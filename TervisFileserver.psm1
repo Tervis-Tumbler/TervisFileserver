@@ -487,7 +487,7 @@ $(
 </body></html>
 "@
     if($FailedLinuxMounts -or $FailedNamespaces){
-        Send-TervisMailMessage -From $FromAddress -To $ToAddress -Subject $Subject -Body $Body
+        Send-TervisMailMessage -From $FromAddress -To $ToAddress -Subject $Subject -Body $Body -BodyAsHTML
     }
 }
 
@@ -511,14 +511,14 @@ function Test-DFSNamespaceFolderHealth {
 
 
 function Test-LocalLinuxDirectoryHealthCheck {
-    $LinuxServersToMonitor = @"
-ebsdb-prd
-ebsapps-prd
-p-odbee02
-p-weblogic01
-p-weblogic02
-p-infadac
-"@ -split "`n"
+    $LinuxServersToMonitor = `
+"ebsdb-prd", `
+"ebsapps-prd", `
+"p-odbee02", `
+"p-weblogic01", `
+"p-weblogic02", `
+"p-infadac"
+
     $PasswordstateCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 5574)
     ForEach($ComputerName in $LinuxServersToMonitor){
         if(-not (Get-SSHSession -ComputerName $ComputerName)){
@@ -528,6 +528,16 @@ p-infadac
             $SSHSession = Get-SSHSession -ComputerName $ComputerName
         }
         $RawFSTAB = (Invoke-SSHCommand -SSHSession $SSHSession -Command "sudo cat /etc/fstab").output -split "`r`n" | Where-Object {$_ -NotMatch "^#"}
+        try{
+            Invoke-SSHCommand -SSHSession (Get-SSHSession -ComputerName $($ComputerName)) -Command "df" -TimeOut 10 | Out-Null
+        }
+        catch{
+            [PSCustomObject]@{
+                Path = "df command execution"
+                Computername = $ComputerName
+                Status = "df execution timed out"
+            }
+        }
         foreach($Entry in $RawFSTAB){
             $Mountpoint = ($Entry -split "\s+")[1]
             $FilesystemType = ($Entry -split "\s+")[2]
