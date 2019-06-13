@@ -1,4 +1,7 @@
-﻿$ExplorerFavoritesShortcutDefinition = [PSCustomObject][Ordered]@{
+﻿$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
+. $ModulePath\TervisFileserverDefinitions.ps1
+
+$ExplorerFavoritesShortcutDefinition = [PSCustomObject][Ordered]@{
         Name = "Applications"
         Target = "\\tervis.prv\Applications"
     },
@@ -586,3 +589,24 @@ function Install-FileResourceMonitorPowershellApplication {
 Invoke-InfrastructurePathChecks
 "@
 }
+
+function Get-TervisFileRetentionDefinition {
+    param (
+        [Parameter(Mandatory)]$ApplicationName
+    )
+    $FileRetentionDefinitions | where ApplicationName -eq $ApplicationName
+}
+
+function Invoke-RetentionBasedFileCleanup{
+    [CmdletBinding(SupportsShouldProcess=$True)]
+    param(
+        [Parameter(Mandatory)]$ApplicationName
+    )
+    Foreach($Location in $FileRetentionDefinitions){
+        $TimeSpan = New-TimeSpan -Days $Location.RetentionDays -Hours $Location.RetentionHours -Minutes $Location.RetentionMinutes -Seconds $Location.RetentionSeconds
+        $OldestRetentionDate = (get-date) - $TimeSpan
+
+        $FilesToDelete = Get-ChildItem -Path $Location.Path -File | where CreationTime -lt $OldestRetentionDate | Remove-Item -Force -Verbose
+    }
+}
+
