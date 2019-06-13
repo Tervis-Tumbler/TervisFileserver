@@ -599,14 +599,13 @@ function Get-TervisFileRetentionDefinition {
 
 function Invoke-RetentionBasedFileCleanup{
     [CmdletBinding(SupportsShouldProcess=$True)]
-    param(
-        [Parameter(Mandatory)]$ApplicationName
-    )
-    Foreach($Location in $FileRetentionDefinitions){
-        $TimeSpan = New-TimeSpan -Days $Location.RetentionDays -Hours $Location.RetentionHours -Minutes $Location.RetentionMinutes -Seconds $Location.RetentionSeconds
-        $OldestRetentionDate = (get-date) - $TimeSpan
+    param()
 
-        $FilesToDelete = Get-ChildItem -Path $Location.Path -File | where CreationTime -lt $OldestRetentionDate | Remove-Item -Force -Verbose
+    Foreach($Location in $FileRetentionDefinitions){
+#        $TimeSpan = New-TimeSpan -Days $Location.RetentionDays -Hours $Location.RetentionHours -Minutes $Location.RetentionMinutes -Seconds $Location.RetentionSeconds
+        $OldestRetentionDate = (get-date) - $Location.RetentionTimeSpan
+
+        Get-ChildItem -Path $Location.Path -File | where CreationTime -lt $OldestRetentionDate | Remove-Item -Force
     }
 }
 
