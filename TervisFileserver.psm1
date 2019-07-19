@@ -1,4 +1,4 @@
-﻿$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
+$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
 . $ModulePath\TervisFileserverDefinitions.ps1
 
 $ExplorerFavoritesShortcutDefinition = [PSCustomObject][Ordered]@{
@@ -609,3 +609,68 @@ function Invoke-RetentionBasedFileCleanup{
     }
 }
 
+function Invoke-ConfigureNewDFSReplicationGroup{
+    param(
+        [parameter(Mandatory,ValueFromPipelineByPropertyName)]$SourcePath,
+        [parameter(Mandatory,ValueFromPipelineByPropertyName)]$DestinationPath
+    )
+    process{
+        $Domain = Get-ADDomain
+        $DFSRoots = Get-DfsnRoot -Domain $Domain.DNSRoot | select path -ExpandProperty path
+        $DestinationNamespace = $DFSRoots | where {$DestinationPath -like "$($_.path)*" }
+        $DFSRGroupName = ($sourcepath.Split("\") | select -last 3) -join "_"
+        $DFSRFolderName = ($sourcepath.Split("\") | select -last 1) -join "_"
+        $DFSNamespaceFolders = (Get-DfsnFolder -Path "$DestinationNamespace\*").Path.Replace($Domain.NetBIOSName,$Domain.DNSRoot)
+        $DFSReplicationGroups = Get-DfsReplicationGroup
+
+        if($DFSReplicationGroups.GroupName -notcontains $DFSRGroupName){
+            if($SourcePath -notlike "\\$($Domain.NetBIOSName)*"){
+                $SourceComputerName = $SourcePath.Split("\")[2]
+                $SourceShares = Get-WmiObject -Class Win32_Share -computer $SourceComputerName
+                $SourceShare = $SourceShares | where {$SourcePath -match $_.name}
+                $SourcePathSplit = $sourcepath.Split("\")
+                $ShareSubPathPosition = $SourcePathSplit.IndexOf($SourceShare.Name)
+                $SourceSubPath = $SourcePathSplit[($ShareSubPathPosition+1)..$SourcePathSplit.count] -join "\"
+                $SourcePhysicalPath = "$($SourceShare.path)\$SourceSubPath"
+            }
+            else{
+                $SourceDFSNAbsoluteSharePath = (((dfsutil diag viewdfspath $destinationpath) -split "[<>]") -match "[\\]")[-1]
+                $SourceComputerName = $SourceDFSNAbsoluteSharePath.split("\")[2]
+                $SourceDFSNamespaceFolderPath = $DFSNamespaceFolders | Where {$SourcePath -like "$_*"}
+                $SourcePathSuffix = $SourcePath -iReplace [regex]::Escape($SourceDFSNamespaceFolderPath),""
+                $SourceShares = Get-WmiObject -Class Win32_Share -computer $SourceComputerName
+                $SourceShareDetail = $SourceShares | where {($SourcePath -Match ($_.name -replace ".$","")) -and ($_.Description -ne "Default share") -and ($($Sourcenamespace) -notlike "*$($_.Name)")  }
+                $SourcePhysicalPath = "$($SourceShareDetail.Path)$SourcePathSuffix"
+            }
+            if($DestinationPath -notlike "\\$($Domain.NetBIOSName)*"){
+                $SourceComputerName = $SourcePath.Split("\")[2]
+                $DestinationShares = Get-WmiObject -Class Win32_Share -computer $DestinationComputerName
+                $DestinationShare = $DestinationShares | where {$DestinationPath -match $_.name}
+                $DestinationPathSplit = $Destinationpath.Split("\")
+                $ShareSubPathPosition = $DestinationPathSplit.IndexOf($DestinationShare.Name)
+                $DestinationSubPath = $DestinationPathSplit[($ShareSubPathPosition+1)..$DestinationPathSplit.count] -join "\"
+                $DestinationPhysicalPath = "$($DestinationShare.path)\$DestinationSubPath"
+            }
+            else{
+                $DestinationDFSNAbsoluteSharePath = (((dfsutil diag viewdfspath $destinationpath) -split "[<>]") -match "[\\]")[-1]
+                $DestinationComputerName = $DestinationDFSNAbsoluteSharePath.split("\")[2]
+                $DestinationDFSNamespaceFolderPath = $DFSNamespaceFolders | Where {$DestinationPath -like "$_*"}
+                $DestinationPathSuffix = $DestinationPath -iReplace [regex]::Escape($DestinationDFSNamespaceFolderPath),""
+                $DestinationShares = Get-WmiObject -Class Win32_Share -computer $DestinationComputerName
+                $DestinationShareDetail = $DestinationShares | where {($DestinationPath -Match ($_.name -replace ".$","")) -and ($_.Description -ne "Default share") -and ($($Destinationnamespace) -notlike "*$($_.Name)")  }
+                $DestinationPhysicalPath = "$($DestinationShareDetail.Path)$DestinationPathSuffix"
+            }
+
+            New-DfsReplicationGroup -GroupName $DFSRGroupName -DomainName $($Domain.DNSRoot)
+            Add-DfsrMember -GroupName $DFSRGroupName -ComputerName $SourceComputerName -DomainName $($Domain.DNSRoot)
+            Add-DfsrMember -GroupName $DFSRGroupName -ComputerName $DestinationComputerName -DomainName $($Domain.DNSRoot)
+            New-DfsReplicatedFolder -GroupName $DFSRGroupName -DomainName $($Domain.DNSRoot) -FolderName $DFSRFolderName
+            Add-DfsrConnection -GroupName $DFSRGroupName -SourceComputerName $SourceComputerName -DestinationComputerName $DestinationComputerName
+
+            Set-DfsrMembership -GroupName $DFSRGroupName -FolderName $DFSRFolderName -ComputerName $SourceComputerName -ContentPath $SourcePhysicalPath -PrimaryMember $true -Force
+            Set-DfsrMembership -GroupName $DFSRGroupName -FolderName $DFSRFolderName -ComputerName $DestinationComputerName -ContentPath $DestinationPhysicalPath -Force
+
+            Update-DfsrConfigurationFromAD -ComputerName $SourceComputerName,$DestinationComputerName
+        }
+    }
+}    
