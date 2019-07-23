@@ -1,4 +1,7 @@
-﻿$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
+﻿#$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
+#. $ModulePath\TervisFileserverDefinitions.ps1
+
+$ModulePath = Split-Path -parent $MyInvocation.MyCommand.Path
 . $ModulePath\TervisFileserverDefinitions.ps1
 
 $ExplorerFavoritesShortcutDefinition = [PSCustomObject][Ordered]@{
@@ -617,12 +620,12 @@ function Install-DataRetentionPolicyEnforcementPowershellApplication {
     Install-PowerShellApplication -ComputerName $ComputerName `
         -EnvironmentName "Infrastructure" `
         -ModuleName "TervisFileServer" `
-        -TervisModuleDependencies TervisMicrosoft.PowerShell.Utility`
+        -TervisModuleDependencies "TervisMicrosoft.PowerShell.Utility","TervisFileServer" `
         -ScheduledTasksCredential $ScheduledTaskCredential `
         -ScheduledTaskName "DataRetentionPolicyEnforcement" `
         -RepetitionIntervalName "EverWorkdayDuringTheDayEvery15Minutes" `
         -CommandString @"
-    Invoke-DataRetentionPolicyEnforcement
+Invoke-DataRetentionPolicyEnforcement
 "@
 }
 
