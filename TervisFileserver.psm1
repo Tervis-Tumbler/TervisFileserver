@@ -1,4 +1,4 @@
-$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
+﻿$ModulePath = (Get-Module -ListAvailable TervisFileserver).ModuleBase
 . $ModulePath\TervisFileserverDefinitions.ps1
 
 $ExplorerFavoritesShortcutDefinition = [PSCustomObject][Ordered]@{
@@ -597,7 +597,7 @@ function Get-TervisFileRetentionDefinition {
     $FileRetentionDefinitions | where ApplicationName -eq $ApplicationName
 }
 
-function Invoke-RetentionBasedFileCleanup{
+function Invoke-DataRetentionPolicyEnforcement{
     [CmdletBinding(SupportsShouldProcess=$True)]
     param()
 
@@ -607,6 +607,23 @@ function Invoke-RetentionBasedFileCleanup{
 
         Get-ChildItem -Path $Location.Path -File | where CreationTime -lt $OldestRetentionDate | Remove-Item -Force
     }
+}
+
+function Install-DataRetentionPolicyEnforcementPowershellApplication {
+	param (
+		$ComputerName
+	)
+    $ScheduledTaskCredential = New-Object System.Management.Automation.PSCredential (Get-PasswordstatePassword -AsCredential -ID 259)
+    Install-PowerShellApplication -ComputerName $ComputerName `
+        -EnvironmentName "Infrastructure" `
+        -ModuleName "TervisFileServer" `
+        -TervisModuleDependencies TervisMicrosoft.PowerShell.Utility`
+        -ScheduledTasksCredential $ScheduledTaskCredential `
+        -ScheduledTaskName "DataRetentionPolicyEnforcement" `
+        -RepetitionIntervalName "EverWorkdayDuringTheDayEvery15Minutes" `
+        -CommandString @"
+    Invoke-DataRetentionPolicyEnforcement
+"@
 }
 
 function Invoke-ConfigureNewDFSReplicationGroup{
