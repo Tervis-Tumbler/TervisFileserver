@@ -654,7 +654,7 @@ function Invoke-ConfigureNewDFSReplicationGroup{
                 $SourcePhysicalPath = "$($SourceShare.path)\$SourceSubPath"
             }
             else{
-                $SourceDFSNAbsoluteSharePath = (((dfsutil diag viewdfspath $destinationpath) -split "[<>]") -match "[\\]")[-1]
+                $SourceDFSNAbsoluteSharePath = (((dfsutil diag viewdfspath $SourcePath) -split "[<>]") -match "[\\]")[-1]
                 $SourceComputerName = $SourceDFSNAbsoluteSharePath.split("\")[2]
                 $SourceDFSNamespaceFolderPath = $DFSNamespaceFolders | Where {$SourcePath -like "$_*"}
                 $SourcePathSuffix = $SourcePath -iReplace [regex]::Escape($SourceDFSNamespaceFolderPath),""
