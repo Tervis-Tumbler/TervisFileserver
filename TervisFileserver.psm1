@@ -694,3 +694,25 @@ function Invoke-ConfigureNewDFSReplicationGroup{
         }
     }
 }    
+
+function Invoke-OracleDRServerProvision {
+    $EnvironmentName = "Infrastructure"
+    $ApplicationName = "OracleDR"
+    $TervisApplicationDefinition = Get-TervisApplicationDefinition -Name $ApplicationName
+    Invoke-ApplicationProvision -ApplicationName $ApplicationName -EnvironmentName $EnvironmentName
+}
+
+function Invoke-AcronisFileServerProvision {
+    $EnvironmentName = "Infrastructure"
+    $ApplicationName = "AcronisFileServer"
+    $TervisApplicationDefinition = Get-TervisApplicationDefinition -Name $ApplicationName
+    Invoke-ApplicationProvision -ApplicationName $ApplicationName -EnvironmentName $EnvironmentName
+}
+
+function Invoke-2019FileServerProvision {
+    $EnvironmentName = "Infrastructure"
+    $ApplicationName = "2019FileServer"
+    $TervisApplicationDefinition = Get-TervisApplicationDefinition -Name $ApplicationName
+    Invoke-ApplicationProvision -ApplicationName $ApplicationName -EnvironmentName $EnvironmentName
+    
+}
